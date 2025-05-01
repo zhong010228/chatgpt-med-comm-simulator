@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 # 预设医患情境
 scenarios = {
-    "情绪焦虑的乳腺癌患者": "你是一位患有乳腺癌的女性病人，刚刚确诊，非常焦虑和恐惧，对未来感到迷茫。请真实生动地回答医学生提出的问题。请你用患者的身份自然表达感受、提出问题或需求，态度稍微恶劣点，要略微刁难学生，不要扮演医学生或医生的角色。",
+    "情绪焦虑的乳腺癌患者": "你是一位患有乳腺癌的女性病人，刚刚确诊，非常焦虑和恐惧，对未来感到迷茫。请真实生动地回答医学生提出的问题。请你用患者的身份自然表达感受、提出问题或需求。态度要稍微恶劣点，略微刁难学生，当听到满意回答之后态度要缓和，至少和学生保持5个对话来回。不要扮演医学生或医生的角色。",
     "糖尿病患者血糖控制差": "你是一位中年糖尿病患者，血糖控制不佳，医生多次建议改变生活方式但你感到力不从心。"
 }
 
@@ -67,10 +67,8 @@ def feedback():
 
     feedback_resp = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "你是医学教育专家。"},
-            {"role": "user", "content": prompt}
-        ]
+        messages=[{"role": "system", "content": "你是医学教育专家。"},
+                  {"role": "user", "content": prompt}]
     )
 
     feedback_text = feedback_resp.choices[0].message.content
@@ -87,6 +85,22 @@ def feedback():
         ])
 
     return jsonify({"feedback": feedback_text})
+
+# 显示评分统计数据的页面
+@app.route("/statistics")
+def statistics():
+    # 从 CSV 文件读取数据并返回给前端显示
+    feedback_data = []
+    try:
+        with open(log_file, mode="r", encoding="utf-8") as file:
+            reader = csv.reader(file)
+            next(reader)  # 跳过表头
+            for row in reader:
+                feedback_data.append(row)
+    except FileNotFoundError:
+        feedback_data = []  # 如果文件不存在，返回空列表
+    
+    return render_template("statistics.html", feedback_data=feedback_data)
 
 if __name__ == "__main__":
     app.run(debug=True)
