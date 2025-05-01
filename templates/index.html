@@ -1,70 +1,106 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>ChatGPT 医患沟通模拟系统</title>
-</head>
-<body>
-  <h1>医患沟通情境模拟训练</h1>
+  <head>
+    <meta charset="utf-8">
+    <title>ChatGPT 医患沟通模拟系统</title>
+    <style>
+      /* 基本样式优化 */
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f7f6;
+        margin: 20px;
+        padding: 20px;
+      }
+      h1 {
+        color: #3b4f4f;
+      }
+      h2, h3 {
+        color: #5b7d7d;
+      }
+      input, textarea, select, button {
+        padding: 10px;
+        margin: 5px 0;
+        font-size: 16px;
+        width: 100%;
+      }
+      textarea {
+        resize: none;
+      }
+      button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        width: 30%;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>医患沟通情境模拟训练</h1>
+    <h2>请先输入姓名和学号：</h2>
+    <label>姓名：<input type="text" id="studentName" /></label><br/>
+    <label>学号：<input type="text" id="studentID" /></label><br/><br/>
 
-  <h2>请先输入姓名和学号：</h2>
-  <label>姓名：<input type="text" id="studentName" /></label><br/>
-  <label>学号：<input type="text" id="studentID" /></label><br/><br/>
+    <h3>选择一个模拟情境：</h3>
+    <select id="scenarioSelect">
+      {% for key in scenarios %}
+        <option value="{{ key }}">{{ key }}</option>
+      {% endfor %}
+    </select><br/><br/>
 
-  <h3>选择一个模拟情境：</h3>
-  <select id="scenarioSelect">
-    {% for key in scenarios %}
-      <option value="{{ key }}">{{ key }}</option>
-    {% endfor %}
-  </select><br/><br/>
+    <textarea id="chatLog" rows="12" cols="80" readonly placeholder="对话记录将显示在这里..."></textarea>
+    <input type="text" id="userInput" placeholder="请输入你的提问..." />
+    <button onclick="sendMessage()">发送</button>
+    <button onclick="submitFeedback()">提交评分</button>
+    <button onclick="clearChat()">清空对话</button>
 
-  <textarea id="chatLog" rows="12" cols="80" readonly placeholder="对话记录将显示在这里..."></textarea><br/>
-  <input type="text" id="userInput" placeholder="请输入你的提问..." />
-  <button onclick="sendMessage()">发送</button>
-  <button onclick="submitFeedback()">提交评分</button>
+    <script>
+      let messages = []
 
-  <script>
-    let messages = []
-
-    async function sendMessage() {
-      const input = document.getElementById("userInput").value
-      if (!input) return
-
-      messages.push({ role: "user", content: input })
-      document.getElementById("chatLog").value += "你：" + input + "\n"
-
-      const scenario = document.getElementById("scenarioSelect").value
-      const response = await fetch("/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenario, messages })
-      })
-
-      const data = await response.json()
-      messages.push({ role: "assistant", content: data.reply })
-      document.getElementById("chatLog").value += "患者：" + data.reply + "\n"
-      document.getElementById("userInput").value = ""
-    }
-
-    async function submitFeedback() {
-      const student_id = document.getElementById("studentID").value.trim()
-      const student_name = document.getElementById("studentName").value.trim()
-      if (!student_id || !student_name) {
-        alert("请填写姓名和学号后再提交评分。")
-        return
+      async function sendMessage() {
+        const input = document.getElementById("userInput").value
+        if (!input) return
+        messages.push({ role: "user", content: input })
+        document.getElementById("chatLog").value += "\n你：" + input + "\n"
+        
+        const scenario = document.getElementById("scenarioSelect").value
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scenario, messages })
+        })
+        const data = await response.json()
+        messages.push({ role: "assistant", content: data.reply })
+        document.getElementById("chatLog").value += "\n患者：" + data.reply + "\n"
+        document.getElementById("userInput").value = ""
       }
 
-      const conversation = messages.map(m => `${m.role === 'user' ? '你' : '患者'}：${m.content}`).join("\n")
+      async function submitFeedback() {
+        const student_id = document.getElementById("studentID").value.trim()
+        const student_name = document.getElementById("studentName").value.trim()
+        if (!student_id || !student_name) {
+          alert("请填写姓名和学号后再提交评分。")
+          return
+        }
+        
+        const conversation = messages.map(m => `${m.role === 'user' ? '\n你' : '\n患者'}：${m.content}`).join('')
+        const response = await fetch("/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ student_id, student_name, conversation })
+        })
+        const data = await response.json()
+        alert("评分结果：\n" + data.feedback)
+      }
 
-      const response = await fetch("/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student_id, student_name, conversation })
-      })
-
-      const data = await response.json()
-      alert("评分结果：\n" + data.feedback)
-    }
-  </script>
-</body>
+      function clearChat() {
+        messages = []
+        document.getElementById("chatLog").value = ""
+        document.getElementById("userInput").value = ""
+      }
+    </script>
+  </body>
 </html>

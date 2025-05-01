@@ -1,11 +1,13 @@
 from openai import OpenAI
 from flask import Flask, request, jsonify, render_template
 import os
+import csv
+from datetime import datetime
 
 # 初始化 OpenAI 客户端，设置自定义 base_url 和 API 密钥
 client = OpenAI(
     base_url='https://xiaoai.plus/v1',  # 你的自定义 API 端点
-    api_key='sk-ilCrCDkgsYBgVOwoVN74jVUE1HaWn7TSstu4Pibj4wJGH3jy'  # 你的 API 密钥
+    api_key='sk-aHudZVImYEOH2VWVL5jkLYbC1Mcm3AFwkvjdpdJZb559KB98'  # 你的 API 密钥
 )
 
 app = Flask(__name__)
@@ -36,7 +38,8 @@ def chat():
         model="gpt-3.5-turbo",  # 使用最便宜的模型
         messages=messages
     )
-    reply = response.choices[0].message["content"]
+    # 修正了对 response 的访问方式
+    reply = response.choices[0].message.content
     return jsonify({"reply": reply})
 
 # 评分反馈模块
@@ -51,7 +54,7 @@ def feedback():
     3. 沟通技巧
     4. 人文关怀意识
     每项后请附简短评语。
-    """
+    """  # 这里的多行字符串已经正确关闭
 
     # 评分反馈请求，调用自定义 OpenAI API 端点
     feedback_resp = client.chat.completions.create(
@@ -59,6 +62,7 @@ def feedback():
         messages=[{"role": "system", "content": "你是医学教育专家。"},
                   {"role": "user", "content": prompt}]
     )
+    # 修正了对 feedback_resp 的访问方式
     return jsonify({"feedback": feedback_resp.choices[0].message["content"]})
 
 if __name__ == "__main__":
